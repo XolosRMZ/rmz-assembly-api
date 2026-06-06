@@ -158,20 +158,12 @@ votesRouter.post("/", async (req, res, next) => {
       return;
     }
 
-    let signatureValid = false;
-
-    try {
-      signatureValid = verifyVoteSignature({
-        message: parsed.data.message,
-        signature: parsed.data.signature,
-        publicKey: parsed.data.publicKey,
-        wallet: normalizedWallet
-      });
-    } catch (error) {
-      if (error instanceof Error && error.message !== "Signature verification not available") {
-        throw error;
-      }
-    }
+    const signatureValid = verifyVoteSignature({
+      message: parsed.data.message,
+      signature: parsed.data.signature,
+      publicKey: parsed.data.publicKey,
+      wallet: normalizedWallet
+    });
 
     if (!signatureValid) {
       res.status(400).json({ accepted: false, error: "Invalid signature" });
