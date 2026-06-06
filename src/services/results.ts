@@ -1,4 +1,4 @@
-import { access, readFile, readdir } from "node:fs/promises";
+import { access, appendFile, mkdir, readFile, readdir } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import path from "node:path";
 import { Proposal, ProposalSchema } from "../schemas/proposal.js";
@@ -28,6 +28,11 @@ export function proposalFilePath(proposalId: string): string {
 
 export function voteFilePath(proposalId: string): string {
   return path.join(votesDir, `${proposalId}.jsonl`);
+}
+
+export async function appendVoteRecord(record: VoteRecord): Promise<void> {
+  await mkdir(votesDir, { recursive: true });
+  await appendFile(voteFilePath(record.proposalId), `${JSON.stringify(record)}\n`, "utf8");
 }
 
 export async function readProposal(proposalId: string): Promise<ProposalWithHash | null> {
@@ -99,7 +104,7 @@ export async function calculateResults(proposal: Proposal): Promise<ProposalResu
       continue;
     }
 
-    const normalizedAlias = record.normalizedAlias.toLowerCase();
+    const normalizedAlias = (record.normalizedAlias ?? record.alias).toLowerCase();
     const existing = latestByAlias.get(normalizedAlias);
 
     if (!existing) {

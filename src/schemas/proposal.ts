@@ -9,6 +9,7 @@ export const ProposalSchema = z.object({
   id: z.string().min(1),
   title: z.string().min(1),
   summary: z.string().optional(),
+  status: z.enum(["draft", "open", "closed"]).default("open"),
   startsAt: z.string().datetime(),
   endsAt: z.string().datetime(),
   choices: z.array(ChoiceSchema).min(1),

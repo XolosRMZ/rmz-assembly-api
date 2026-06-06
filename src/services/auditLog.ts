@@ -1,5 +1,6 @@
-import { access, readFile } from "node:fs/promises";
+import { access, appendFile, mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
+import { VoteRecord } from "../schemas/vote.js";
 
 const dataRoot = path.resolve(process.cwd(), "data");
 
@@ -17,4 +18,11 @@ export async function readAuditLogText(proposalId: string): Promise<string | nul
   }
 
   return readFile(filePath, "utf8");
+}
+
+export async function appendAuditRecord(record: VoteRecord): Promise<void> {
+  const filePath = auditFilePath(record.proposalId);
+
+  await mkdir(path.dirname(filePath), { recursive: true });
+  await appendFile(filePath, `${JSON.stringify(record)}\n`, "utf8");
 }
