@@ -21,6 +21,12 @@ npm run dev
 
 Copy `.env.example` to `.env` when overriding defaults.
 
+Eligibility defaults:
+
+- `CHRONIK_URL=https://chronik.xolosarmy.xyz`
+- `ALIAS_INDEXER_URL=https://alias.ecash.mx`
+- `RMZ_TOKEN_ID=c923bd0f09c630c5e9980cf518c8d34b6353802a3cb7c3f34fa7cc85c9305908`
+
 ## Scripts
 
 - `npm run dev` - run the API with `tsx`
@@ -40,13 +46,48 @@ Copy `.env.example` to `.env` when overriding defaults.
 - `POST /v1/assembly/votes/prepare`
 - `POST /v1/assembly/votes`
 
+### Eligibility Check
+
+`POST /v1/assembly/eligibility/check` verifies the server-side rule: one confirmed `.xec` alias matching the submitted eCash wallet, plus at least one atom of the configured RMZ token, is eligible for one vote. The API normalizes alias and wallet input, rejects pending aliases, fails closed when the alias indexer or Chronik is unavailable, and returns evidence from both systems.
+
+Request:
+
+```bash
+curl -X POST http://127.0.0.1:3016/v1/assembly/eligibility/check \
+  -H "Content-Type: application/json" \
+  -d '{"alias":"xolosarmy.xec","wallet":"ecash:qzdq0q65fwnt94rlcph5kllj0xcry6e0v58zrgp7a3"}' | jq
+```
+
+Eligible response:
+
+```json
+{
+  "eligible": true,
+  "alias": "xolosarmy.xec",
+  "wallet": "ecash:qzdq0q65fwnt94rlcph5kllj0xcry6e0v58zrgp7a3",
+  "rmz": {
+    "holder": true,
+    "tokenId": "c923bd0f09c630c5e9980cf518c8d34b6353802a3cb7c3f34fa7cc85c9305908",
+    "atoms": "1"
+  },
+  "aliasRecord": {
+    "status": "confirmed",
+    "txid": "...",
+    "blockheight": 952171,
+    "address": "ecash:qzdq0q65fwnt94rlcph5kllj0xcry6e0v58zrgp7a3"
+  },
+  "checkedAt": "2026-06-06T00:00:00.000Z"
+}
+```
+
+Ineligible responses include `eligible: false`, the normalized `alias` and `wallet`, a `reason`, `checkedAt`, and any available `aliasRecord` or `rmz` evidence. Common reasons include `Alias not found`, `Alias is not confirmed`, `Alias does not match wallet`, `Wallet does not hold RMZ`, `Alias indexer unavailable`, and `Chronik unavailable`. Invalid aliases or wallet addresses return HTTP 400.
+
 ## Public Audit Caveat
 
 Votes and audit records are designed to be public in this MVP. Do not submit private data that should not be exposed in public JSON or JSONL records.
 
-## B3.1 Limitations
+## Current Limitations
 
-- Eligibility checks are stubs and always return `eligible: false`.
 - Signature verification is not implemented; vote submission returns HTTP 501.
 - SQLite is not implemented.
 - Proposals are loaded from JSON files in `data/proposals`.

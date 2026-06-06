@@ -1,27 +1,25 @@
 import { Router } from "express";
-import { EligibilityCheckRequestSchema, aliasRegex } from "../schemas/vote.js";
+import { EligibilityCheckRequestSchema } from "../schemas/vote.js";
+import { checkEligibility, EligibilityInputError } from "../services/eligibility.js";
 
 export const eligibilityRouter = Router();
 
-eligibilityRouter.post("/check", (req, res) => {
-  const parsed = EligibilityCheckRequestSchema.safeParse(req.body);
+eligibilityRouter.post("/check", async (req, res, next) => {
+  try {
+    const parsed = EligibilityCheckRequestSchema.safeParse(req.body);
 
-  if (!parsed.success) {
-    res.status(400).json({ error: "Invalid eligibility check request", details: parsed.error.flatten() });
-    return;
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid eligibility check request", details: parsed.error.flatten() });
+      return;
+    }
+
+    res.json(await checkEligibility(parsed.data));
+  } catch (error) {
+    if (error instanceof EligibilityInputError) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+
+    next(error);
   }
-
-  const alias = parsed.data.alias.toLowerCase();
-
-  if (!aliasRegex.test(alias)) {
-    res.status(400).json({ error: "Invalid alias format" });
-    return;
-  }
-
-  res.json({
-    eligible: false,
-    alias,
-    wallet: parsed.data.wallet,
-    reason: "Eligibility service not implemented yet"
-  });
 });
